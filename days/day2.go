@@ -1,6 +1,7 @@
 package days
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -50,4 +51,37 @@ func process(codes []int) (int, error) {
 
 		i += 4
 	}
+}
+
+// Day2Part2 solves Day 2, Part 2
+func Day2Part2(input []string) (string, error) {
+	codeStrings := strings.Split(input[0], ",")
+	codes := make([]int, len(codeStrings))
+	for i, c := range codeStrings {
+		x, err := strconv.Atoi(c)
+		if err != nil {
+			return "", err
+		}
+		codes[i] = x
+	}
+
+	for noun := 0; noun < 100; noun++ {
+		for verb := 0; verb < 100; verb++ {
+			// Copy the original input so we don't use a stale version
+			currCodes := append(codes[:0:0], codes...)
+
+			// Set the inputs
+			currCodes[1] = noun
+			currCodes[2] = verb
+
+			res, err := process(currCodes)
+			if err != nil {
+				return "", err
+			}
+			if res == 19690720 {
+				return fmt.Sprintf("%d", 100*noun+verb), nil
+			}
+		}
+	}
+	return "", errors.New("Could not solve")
 }
