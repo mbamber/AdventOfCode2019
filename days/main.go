@@ -1,5 +1,7 @@
 package days
 
+import "fmt"
+
 type partMap map[int]func(input []string) (string, error)
 
 // Run calls the correct function for the given day and part
@@ -14,7 +16,14 @@ func Run(day, part int, input []string) (string, error) {
 			1: Day2Part1,
 			2: Day2Part2,
 		},
+		3: partMap{
+			1: Day3Part1,
+		},
 	}
 
-	return funcList[day][part](input)
+	f, ok := funcList[day][part]
+	if !ok {
+		return "", fmt.Errorf("No function defined for Day %d, Part %d", day, part)
+	}
+	return f(input)
 }
