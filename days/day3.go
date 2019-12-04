@@ -88,3 +88,50 @@ func getPoints(start utils.Point, instruction string) (points []utils.Point, err
 	}
 	return points, nil
 }
+
+// Day3Part2 solves Day 3, Part 2
+func Day3Part2(input []string) (string, error) {
+	l1 := strings.Split(input[0], ",")
+	l2 := strings.Split(input[1], ",")
+
+	wire1, err := generateWire(l1)
+	if err != nil {
+		return "", err
+	}
+	wire2, err := generateWire(l2)
+	if err != nil {
+		return "", err
+	}
+
+	// Get the intersections
+	intersections := getIntersections(wire1, wire2)
+
+	nearest := 9999999999
+	for _, d := range intersections {
+		if d < nearest && d > 0 {
+			nearest = d
+		}
+	}
+	return fmt.Sprintf("%d", nearest), nil
+}
+
+func getIntersections(w1, w2 []utils.Point) (intersections map[utils.Point]int) {
+	intersections = make(map[utils.Point]int)
+	for _, p1 := range w1 {
+		// Loop through w1 again to get the distance (first occurance)
+		var d1, d2 int
+		var tmpP1, p2 utils.Point
+		for d1, tmpP1 = range w1 {
+			if tmpP1.EqualTo(p1) {
+				break
+			}
+		}
+		// Calculate how far through w2 we are
+		for d2, p2 = range w2 {
+			if p1.EqualTo(p2) {
+				intersections[p1] = d1 + d2
+			}
+		}
+	}
+	return intersections
+}
