@@ -66,3 +66,47 @@ func existsSameDigitNextToEachother(digits []int) bool {
 	}
 	return false
 }
+
+func existsExactlyTwoDigitsNextToEachother(digits []int) bool {
+	currD := digits[0]
+	currCount := 1
+	for i, d := range digits {
+		if i == 0 {
+			continue // Skip the first number because we already set that
+		}
+
+		if d != currD {
+			if currCount == 2 {
+				return true
+			}
+			currD = d
+			currCount = 1
+			continue
+		}
+		currCount++
+	}
+	return currCount == 2
+}
+
+// Day4Part2 solves Day 4, Part 2
+func Day4Part2(input []string) (string, error) {
+	parts := strings.Split(input[0], "-")
+	lower, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return "", err
+	}
+	upper, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return "", err
+	}
+
+	valid := []int{}
+	for i := lower; i <= upper; i++ {
+		digits := getDigits(i)
+		if digitsNeverDecrease(digits) && existsExactlyTwoDigitsNextToEachother(digits) {
+			valid = append(valid, i)
+		}
+	}
+
+	return fmt.Sprintf("%d", len(valid)), nil
+}
