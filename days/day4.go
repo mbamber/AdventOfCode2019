@@ -2,9 +2,10 @@ package days
 
 import (
 	"fmt"
-	"math"
 	"strconv"
 	"strings"
+
+	"aoc/utils"
 )
 
 // Day4Part1 solves Day 4, Part 1
@@ -21,28 +22,13 @@ func Day4Part1(input []string) (string, error) {
 
 	valid := []int{}
 	for i := lower; i <= upper; i++ {
-		digits := getDigits(i)
+		digits := utils.GetDigits(i)
 		if digitsNeverDecrease(digits) && existsSameDigitNextToEachother(digits) {
 			valid = append(valid, i)
 		}
 	}
 
 	return fmt.Sprintf("%d", len(valid)), nil
-}
-
-func getDigits(n int) (digits []int) {
-	backwards := []int{}
-	for n != 0 {
-		rem := int(math.Mod(float64(n), float64(10)))
-		backwards = append(backwards, rem)
-		n /= 10
-	}
-
-	digits = make([]int, len(backwards))
-	for i := len(backwards); i > 0; i-- {
-		digits[len(backwards)-i] = backwards[i-1]
-	}
-	return digits
 }
 
 func digitsNeverDecrease(digits []int) bool {
@@ -102,7 +88,7 @@ func Day4Part2(input []string) (string, error) {
 
 	valid := []int{}
 	for i := lower; i <= upper; i++ {
-		digits := getDigits(i)
+		digits := utils.GetDigits(i)
 		if digitsNeverDecrease(digits) && existsExactlyTwoDigitsNextToEachother(digits) {
 			valid = append(valid, i)
 		}
