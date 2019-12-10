@@ -31,10 +31,45 @@ func (n orbitNode) Chain() []orbitNode {
 	return append(n.orbits.Chain(), n)
 }
 
+func (n orbitNode) InOrbitOf(nodes []orbitNode) []orbitNode {
+	orbiters := []orbitNode{}
+	for _, node := range nodes {
+		if node.orbits == nil {
+			continue
+		}
+
+		if node.orbits.identifier == n.identifier {
+			orbiters = append(orbiters, node)
+			break
+		}
+	}
+
+	return orbiters
+}
+
+func (n orbitNode) HasPathTo(to *orbitNode) (path bool, numSteps int) {
+	chain := n.Chain()
+	for i, node := range chain {
+		if node.identifier == to.identifier {
+			return true, len(chain) - i - 1
+		}
+	}
+	return false, 0
+}
+
 func getNodeWithIdentifier(nodes []*orbitNode, identifier string) *orbitNode {
 	for _, node := range nodes {
 		if node.identifier == identifier {
 			return node
+		}
+	}
+	return nil
+}
+
+func getNodeWithIdentifierFromObjects(nodes []orbitNode, identifier string) *orbitNode {
+	for _, node := range nodes {
+		if node.identifier == identifier {
+			return &node
 		}
 	}
 	return nil
@@ -129,4 +164,30 @@ func buildOrbitMap(input []string) (nodes []orbitNode) {
 	}
 
 	return nodes
+}
+
+// Day6Part2 solves Day 6, Part 2
+func Day6Part2(input []string) (string, error) {
+	rootNodes := buildOrbitMap(input)
+	allNodes := getAllNodes(rootNodes)
+
+	you := getNodeWithIdentifierFromObjects(allNodes, "YOU")
+	san := getNodeWithIdentifierFromObjects(allNodes, "SAN")
+
+	_, d := firstCommonNodeBetween(allNodes, you, san)
+
+	// minus 2 because the distance returned includes YOU and SAN
+	return fmt.Sprintf("%d", d-2), nil
+}
+
+func firstCommonNodeBetween(allNodes []orbitNode, a, b *orbitNode) (node orbitNode, distance int) {
+	for _, node := range allNodes {
+		pathToA, stepsToA := a.HasPathTo(&node)
+		pathToB, stepsToB := b.HasPathTo(&node)
+		if pathToA && pathToB {
+			return node, stepsToA + stepsToB
+		}
+	}
+	fmt.Printf("No common node between %+v and %+v\n", a, b)
+	return orbitNode{}, 0
 }
