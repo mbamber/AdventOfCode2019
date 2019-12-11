@@ -49,79 +49,84 @@ func GetArgumentValue(ptr int, codes []int, mode Mode) (int, error) {
 }
 
 // ProcessInstruction processes a single instruction
-func ProcessInstruction(instructionPointer int, codes []int, instruction Instruction, modes []Mode, input int) (newCodes []int, output *int, newInstructionPointer int, err error) {
+func ProcessInstruction(instructionPointer int, codes []int, instruction Instruction, modes []Mode, in, out chan int, done chan bool) (newCodes []int, newInstructionPointer int, err error) {
+	// When the instruction has been processed, send `true` to the `done` chan so the caller knows we're done
+	defer func() {
+		done <- true
+	}()
+
 	switch instruction {
 	case InstructionAdd:
 		arg1, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 		arg2, err := GetArgumentValue(instructionPointer+2, codes, modes[1])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 
 		codes[codes[instructionPointer+3]] = arg1 + arg2
-		return codes, nil, 0, nil
+		return codes, 0, nil
 
 	case InstructionMultiply:
 		arg1, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 		arg2, err := GetArgumentValue(instructionPointer+2, codes, modes[1])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 
 		codes[codes[instructionPointer+3]] = arg1 * arg2
-		return codes, nil, 0, nil
+		return codes, 0, nil
 
 	case InstructionInput:
-		codes[codes[instructionPointer+1]] = input
-		return codes, nil, 0, nil
+		codes[codes[instructionPointer+1]] = <-in
+		return codes, 0, nil
 
 	case InstructionOutput:
 		arg, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
-		fmt.Println("[OUTPUT] ", arg)
-		return codes, &arg, 0, nil
+		out <- arg
+		return codes, 0, nil
 	case InstructionJumpTrue:
 		arg1, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 		if arg1 != 0 {
 			arg2, err := GetArgumentValue(instructionPointer+2, codes, modes[1])
 			if err != nil {
-				return nil, nil, 0, err
+				return nil, 0, err
 			}
-			return codes, nil, arg2, nil
+			return codes, arg2, nil
 		}
-		return codes, nil, 0, nil
+		return codes, 0, nil
 	case InstructionJumpFalse:
 		arg1, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 		if arg1 == 0 {
 			arg2, err := GetArgumentValue(instructionPointer+2, codes, modes[1])
 			if err != nil {
-				return nil, nil, 0, err
+				return nil, 0, err
 			}
-			return codes, nil, arg2, nil
+			return codes, arg2, nil
 		}
-		return codes, nil, 0, nil
+		return codes, 0, nil
 	case InstructionLessThan:
 		arg1, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 		arg2, err := GetArgumentValue(instructionPointer+2, codes, modes[1])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 
 		if arg1 < arg2 {
@@ -129,15 +134,15 @@ func ProcessInstruction(instructionPointer int, codes []int, instruction Instruc
 		} else {
 			codes[codes[instructionPointer+3]] = 0
 		}
-		return codes, nil, 0, nil
+		return codes, 0, nil
 	case InstructionEquals:
 		arg1, err := GetArgumentValue(instructionPointer+1, codes, modes[0])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 		arg2, err := GetArgumentValue(instructionPointer+2, codes, modes[1])
 		if err != nil {
-			return nil, nil, 0, err
+			return nil, 0, err
 		}
 
 		if arg1 == arg2 {
@@ -145,35 +150,43 @@ func ProcessInstruction(instructionPointer int, codes []int, instruction Instruc
 		} else {
 			codes[codes[instructionPointer+3]] = 0
 		}
-		return codes, nil, 0, nil
+		return codes, 0, nil
 	case InstructionHalt:
-		return codes, nil, 0, nil
+		return codes, 0, nil
 	default:
-		return nil, nil, 0, fmt.Errorf("Unknown instruction %d", instruction)
+		return nil, 0, fmt.Errorf("Unknown instruction %d", instruction)
 	}
 }
 
 // Run runs an opcode program
-func Run(codes []int, input int) (int, error) {
+func Run(codes []int, in, out chan int) error {
 	ip := 0
-	var output *int
-	var lastOutput, newPtr int
+	var newPtr int
+
+	done := make(chan bool)
 	for {
 		instruction, modes, err := DetermineCodeInfo(codes[ip])
 		if err != nil {
-			return 0, err
+			close(out)
+			return err
 		}
 
 		if instruction == InstructionHalt {
-			return lastOutput, nil
+			close(out)
+			return nil
 		}
 
-		codes, output, newPtr, err = ProcessInstruction(ip, codes, instruction, modes, input)
+		go func() {
+			codes, newPtr, err = ProcessInstruction(ip, codes, instruction, modes, in, out, done)
+		}()
+
+		// Block until we're done
+		<-done
+
+		// Check for any error
 		if err != nil {
-			return 0, err
-		}
-		if output != nil {
-			lastOutput = *output
+			close(out)
+			return err
 		}
 
 		// Increment

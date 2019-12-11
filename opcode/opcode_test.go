@@ -137,23 +137,23 @@ func TestProcessInstruction(t *testing.T) {
 		},
 		"Jump True": {
 			ptr:            0,
-			codes:          []int{1105, 0, 1, 99},
+			codes:          []int{1105, 1, 10, 99},
 			instruction:    opcode.InstructionJumpTrue,
 			modes:          []opcode.Mode{opcode.ModeImmediate, opcode.ModeImmediate},
 			input:          1,
-			expectedCodes:  []int{1105, 0, 1, 99},
+			expectedCodes:  []int{1105, 1, 10, 99},
 			expectedOutput: nil,
-			expectedNewPtr: 1,
+			expectedNewPtr: 10,
 		},
 		"Jump False": {
 			ptr:            0,
-			codes:          []int{1106, 1, 1, 99},
+			codes:          []int{1106, 0, 10, 99},
 			instruction:    opcode.InstructionJumpFalse,
 			modes:          []opcode.Mode{opcode.ModeImmediate, opcode.ModeImmediate},
 			input:          1,
-			expectedCodes:  []int{1106, 1, 1, 99},
+			expectedCodes:  []int{1106, 0, 10, 99},
 			expectedOutput: nil,
-			expectedNewPtr: 1,
+			expectedNewPtr: 10,
 		},
 		"Less Than": {
 			ptr:            0,
@@ -198,11 +198,39 @@ func TestProcessInstruction(t *testing.T) {
 	}
 
 	for name, data := range cases {
-		codes, out, ptr, err := opcode.ProcessInstruction(data.ptr, data.codes, data.instruction, data.modes, data.input)
+		in := make(chan int)
+		out := make(chan int)
+		done := make(chan bool)
+
+		var codes []int
+		var ptr int
+		var err error
+
+		go func() {
+			codes, ptr, err = opcode.ProcessInstruction(data.ptr, data.codes, data.instruction, data.modes, in, out, done)
+		}()
+
+		var prevOut int
+		go func() {
+			output, open := <-out
+			for open {
+				prevOut = output
+				output, open = <-out
+			}
+		}()
+
+		// Block until we're finished
+		<-done
+
 		require.NoErrorf(t, err, "Case %s", name)
 		require.Equalf(t, data.expectedCodes, codes, "Case %s", name)
-		require.Equalf(t, data.expectedOutput, out, "Case %s", name)
 		require.Equalf(t, data.expectedNewPtr, ptr, "Case %s", name)
+
+		if data.expectedOutput != nil {
+			require.Equalf(t, *data.expectedOutput, prevOut, "Case %s", name)
+		}
+
+		close(in)
 	}
 }
 
@@ -290,8 +318,28 @@ func TestRun(t *testing.T) {
 	}
 
 	for name, data := range cases {
-		out, err := opcode.Run(data.codes, data.input)
+		in := make(chan int)
+		out := make(chan int)
+		var err error
+		go func() {
+			err = opcode.Run(data.codes, in, out)
+		}()
+
+		// Send the input
+		go func() {
+			in <- data.input
+		}()
+
 		require.NoErrorf(t, err, "Case %s", name)
-		require.Equalf(t, data.expected, out, "Case %s", name)
+
+		output, open := <-out
+		var prevOut int
+		for open {
+			prevOut = output
+			output, open = <-out
+		}
+		require.Equalf(t, data.expected, prevOut, "Case %s", name)
+
+		close(in)
 	}
 }
