@@ -50,6 +50,7 @@ func GetArgumentValue(ptr int, codes []int, mode Mode) (int, error) {
 
 // ProcessInstruction processes a single instruction
 func ProcessInstruction(instructionPointer int, codes []int, instruction Instruction, modes []Mode, in, out chan int, done chan bool) (newCodes []int, newInstructionPointer int, err error) {
+
 	// When the instruction has been processed, send `true` to the `done` chan so the caller knows we're done
 	defer func() {
 		done <- true
