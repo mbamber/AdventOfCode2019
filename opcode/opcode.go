@@ -153,6 +153,7 @@ func ProcessInstruction(instructionPointer int, codes []int, instruction Instruc
 		}
 		return codes, 0, nil
 	case InstructionHalt:
+		close(out)
 		return codes, 0, nil
 	default:
 		return nil, 0, fmt.Errorf("Unknown instruction %d", instruction)
