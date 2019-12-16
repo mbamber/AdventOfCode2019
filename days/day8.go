@@ -72,3 +72,37 @@ func generateLayers(imData string, width, height int) [][][]int {
 
 	return layers
 }
+
+// Day8Part2 solves Day 8, Part 2
+func Day8Part2(input []string) (string, error) {
+
+	imData := input[0]
+	imWidth, imHeight := 25, 6
+
+	layers := generateLayers(imData, imWidth, imHeight)
+
+	message := ""
+	for y := 0; y < imHeight; y++ {
+		for x := 0; x < imWidth; x++ {
+			message += getMessagePixel(layers, x, y)
+		}
+		message += "\n"
+	}
+
+	return message, nil
+}
+
+func getMessagePixel(layers [][][]int, x, y int) string {
+	for _, layer := range layers {
+		pix := layer[y][x]
+		switch pix {
+		case 0:
+			return " "
+		case 1:
+			return "X"
+		default:
+			continue
+		}
+	}
+	return " "
+}
