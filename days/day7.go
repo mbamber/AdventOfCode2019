@@ -20,57 +20,57 @@ func Day7Part1(input []string) (string, error) {
 	}
 
 	numAmplifiers := 5
+	phaseSettings := getPhaseSettings(5)
 
-	phaseSettings := getPhaseSettings(numAmplifiers)
 	maxOutput := 0
+	chans := map[int]struct {
+		in  chan int
+		out chan int
+	}{}
 	for _, currPhaseSettings := range phaseSettings {
-		// Make all the chans
-		chans := map[int]struct {
-			in  chan int
-			out chan int
-		}{}
+		// First setup all the chans for these phase settings
 		for amplifierID := 0; amplifierID < numAmplifiers; amplifierID++ {
 			chans[amplifierID] = struct {
 				in  chan int
 				out chan int
 			}{
-				in:  make(chan int),
-				out: make(chan int),
+				in:  make(chan int, 20),
+				out: make(chan int, 20),
 			}
 		}
 
-		lastOutput := 0
+		// Keep track of the output for these phase settings
+		thisOutput := 0
+
+		// Send the initial phase settings to the correct channels
+		for amplifierID, phaseSetting := range currPhaseSettings {
+			chans[amplifierID].in <- phaseSetting
+		}
+
+		// Send 0 to the first amplifier
+		chans[0].in <- 0
+
+		// Start the amplifiers
 		for amplifierID := 0; amplifierID < numAmplifiers; amplifierID++ {
-			codesCopy := append(codes[:0:0], codes...)
-
-			phaseSetting := currPhaseSettings[amplifierID]
-
-			in := chans[amplifierID].in
-			out := chans[amplifierID].out
-
-			go func() {
-				opcode.Run(codesCopy, in, out)
-			}()
-
-			go func() {
-				in <- phaseSetting
-				in <- lastOutput
-			}()
-
-			output, open := <-out
-			var prevOut int
-			for open {
-				prevOut = output
-				output, open = <-out
-			}
-			lastOutput = prevOut
+			go opcode.Run(append(codes[:0:0], codes...), chans[amplifierID].in, chans[amplifierID].out)
 		}
 
-		// Overwrite the max output if required
-		if lastOutput > maxOutput {
-			maxOutput = lastOutput
+		// Link the amplifiers
+		for amplifierID := 0; amplifierID < numAmplifiers-1; amplifierID++ {
+			sendsTo := amplifierID + 1
+
+			go func(id, to int) {
+				var output int
+				for output = range chans[id].out {
+					chans[to].in <- output
+				}
+			}(amplifierID, sendsTo)
 		}
 
+		thisOutput = <-chans[numAmplifiers-1].out // Block on the final amplifier output
+		if thisOutput > maxOutput {
+			maxOutput = thisOutput
+		}
 	}
 
 	return fmt.Sprintf("%d", maxOutput), nil
