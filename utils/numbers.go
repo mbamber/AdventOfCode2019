@@ -17,3 +17,12 @@ func GetDigits(n int) (digits []int) {
 	}
 	return digits
 }
+
+// GCD returns the GCD of two numbers
+func GCD(a, b int) int {
+	x, y := a, b
+	for y != 0 {
+		x, y = y, x%y
+	}
+	return x
+}
