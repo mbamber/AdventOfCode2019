@@ -1,6 +1,7 @@
 package utils_test
 
 import (
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -210,5 +211,57 @@ func TestVectorEqualTo(t *testing.T) {
 	for name, data := range cases {
 		require.Equalf(t, data.isEqual, data.v1.EqualTo(data.v2), "Case %s", name)
 		require.Equalf(t, data.isEqual, data.v2.EqualTo(data.v1), "Case %s", name)
+	}
+}
+
+func TestVectorAngle(t *testing.T) {
+	cases := map[string]struct {
+		vec      utils.Vector
+		expected float64
+	}{
+		"(0, 0) is NaN": {
+			vec:      utils.NewVector(0, 0),
+			expected: math.NaN(),
+		},
+		"North": {
+			vec:      utils.NewVector(0, 1),
+			expected: 0.0,
+		},
+		"East": {
+			vec:      utils.NewVector(1, 0),
+			expected: 90.0,
+		},
+		"South": {
+			vec:      utils.NewVector(0, -1),
+			expected: 180.0,
+		},
+		"West": {
+			vec:      utils.NewVector(-1, 0),
+			expected: 270.0,
+		},
+		"North East": {
+			vec:      utils.NewVector(1, 1),
+			expected: 45.0,
+		},
+		"South East": {
+			vec:      utils.NewVector(1, -1),
+			expected: 135.0,
+		},
+		"South West": {
+			vec:      utils.NewVector(-1, -1),
+			expected: 225.0,
+		},
+		"North West": {
+			vec:      utils.NewVector(-1, 1),
+			expected: 315.0,
+		},
+	}
+
+	for name, data := range cases {
+		if math.IsNaN(data.expected) {
+			require.Truef(t, math.IsNaN(data.vec.Angle()), "Case %s", name)
+		} else {
+			require.Equalf(t, data.expected, data.vec.Angle(), "Case %s", name)
+		}
 	}
 }

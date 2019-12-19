@@ -27,7 +27,10 @@ func (p *Point) ManhattanDistanceBetween(point Point) int {
 
 // VectorTo returns the vector to the given point
 func (p *Point) VectorTo(point Point) Vector {
-	return NewVector(point.X-p.X, point.Y-p.Y)
+	return Vector{
+		XShift: point.X - p.X,
+		YShift: point.Y - p.Y,
+	}
 }
 
 // PlusVector adds a vector to a point, and returns the new point
@@ -65,7 +68,7 @@ func PointsAtManhattanDistance(d int) (points []Point) {
 	return points
 }
 
-// Vector represents a directional vector
+// Vector represents a directional vector. Note the positive directions are North and East
 type Vector struct {
 	XShift int
 	YShift int
@@ -102,6 +105,51 @@ func (v *Vector) ScaledBy(factor int) Vector {
 		XShift: v.XShift * factor,
 		YShift: v.YShift * factor,
 	}
+}
+
+// Angle returns the number of degrees from (0, 1) (Due North) represented by this Vector. This is a _really_ bad
+// way of working this out
+func (v *Vector) Angle() float64 {
+	// Handle the edge cases where the angle is exactly a compass direction
+	if v.XShift == 0 {
+		if v.YShift > 0 {
+			return 0.0
+		} else if v.YShift < 0 {
+			return 180.0
+		}
+		return math.NaN()
+	}
+
+	if v.YShift == 0 {
+		if v.XShift > 0 {
+			return 90.0
+		} else if v.XShift < 0 {
+			return 270.0
+		}
+		return math.NaN()
+	}
+
+	fy, fx := float64(v.YShift), float64(v.XShift)
+	opp, adj := math.Abs(fy), math.Abs(fx)
+	rad := math.Atan(opp / adj)
+	deg := (360.0 / (2 * math.Pi) * rad)
+
+	// Because we've shifted this round a little (i.e. angle measured clockwise from North) we need to do some adjustments
+	if fy > 0 {
+		if fx > 0 {
+			return 90 - deg
+		}
+		return 270 + deg
+	}
+	if fx > 0 {
+		return 90 + deg
+	}
+	return 270 - deg
+}
+
+// Magnitude returns the magnitude of the vector
+func (v *Vector) Magnitude() float64 {
+	return math.Sqrt(math.Pow(float64(v.XShift), 2) + math.Pow(float64(v.YShift), 2))
 }
 
 // NewVector creates and returns a new, simplified Vector
@@ -147,6 +195,7 @@ func GetAllVectorsFrom(width, height int, p Point) ([]Vector, error) {
 
 			// Calculate the vector, and add it to the list if it's not there already
 			v := p.VectorTo(to)
+			v = v.Simplified()
 			if !VectorSliceContains(vectors, v) {
 				vectors = append(vectors, v)
 			}
