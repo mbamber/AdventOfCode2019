@@ -48,6 +48,9 @@ func Run(day, part int, input []string) (string, error) {
 			1: Day10Part1,
 			2: Day10Part2,
 		},
+		11: partMap{
+			1: Day11Part1,
+		},
 	}
 
 	f, ok := funcList[day][part]
