@@ -50,6 +50,7 @@ func Run(day, part int, input []string) (string, error) {
 		},
 		11: partMap{
 			1: Day11Part1,
+			2: Day11Part2,
 		},
 	}
 
