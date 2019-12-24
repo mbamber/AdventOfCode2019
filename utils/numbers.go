@@ -26,3 +26,8 @@ func GCD(a, b int) int {
 	}
 	return x
 }
+
+// LCM returns the LCM of two numbers
+func LCM(a, b int) int {
+	return a / GCD(a, b) * b
+}
